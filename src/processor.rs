@@ -1,10 +1,9 @@
 use crate::error::ReviewError;
 use crate::instruction::MovieInstruction;
 use crate::state::{MovieAccountState, MovieComment, MovieCommentCounter};
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    borsh::try_from_slice_unchecked,
     entrypoint::ProgramResult,
     msg,
     program::invoke_signed,
@@ -77,8 +76,7 @@ pub fn add_movie_review(
     }
 
     let account_len: usize = 1000;
-
-    if MovieAccountState::get_account_size(title.clone(), description.clone()) > account_len {
+    if MovieAccountState::get_account_size(&title, &description) > account_len {
         msg!("Data length is larger than 1000 bytes");
         return Err(ReviewError::InvalidDataLength.into());
     }
@@ -110,7 +108,7 @@ pub fn add_movie_review(
 
     msg!("unpacking state account");
     let mut account_data =
-        try_from_slice_unchecked::<MovieAccountState>(&pda_account.data.borrow()).unwrap();
+        MovieAccountState::try_from_slice(&pda_account.data.borrow())?;
     msg!("borrowed account data");
 
     msg!("checking if movie account is already initialized");
@@ -159,7 +157,7 @@ pub fn add_movie_review(
     msg!("comment counter created");
 
     let mut counter_data =
-        try_from_slice_unchecked::<MovieCommentCounter>(&pda_counter.data.borrow()).unwrap();
+        MovieCommentCounter::try_from_slice(&pda_counter.data.borrow())?;
 
     msg!("checking if counter account is already initialized");
     if counter_data.is_initialized() {
@@ -201,7 +199,7 @@ pub fn update_movie_review(
 
     msg!("unpacking state account");
     let mut account_data =
-        try_from_slice_unchecked::<MovieAccountState>(&pda_account.data.borrow()).unwrap();
+        MovieAccountState::try_from_slice(&pda_account.data.borrow())?;
     msg!("review title: {}", account_data.title);
 
     let (pda, _bump_seed) = Pubkey::find_program_address(
@@ -227,7 +225,7 @@ pub fn update_movie_review(
         return Err(ReviewError::InvalidRating.into());
     }
 
-    let update_len = MovieAccountState::get_account_size(title, description.clone());
+    let update_len = MovieAccountState::get_account_size(&title, &description);
     if update_len > 1000 {
         msg!("Data length is larger than 1000 bytes");
         return Err(ReviewError::InvalidDataLength.into());
@@ -270,9 +268,9 @@ pub fn add_comment(
     let system_program = next_account_info(account_info_iter)?;
 
     let mut counter_data =
-        try_from_slice_unchecked::<MovieCommentCounter>(&pda_counter.data.borrow()).unwrap();
+        MovieCommentCounter::try_from_slice(&pda_counter.data.borrow())?;
 
-    let account_len = MovieComment::get_account_size(comment.clone());
+    let account_len = MovieComment::get_account_size(&comment);
 
     let rent = Rent::get()?;
     let rent_lamports = rent.minimum_balance(account_len);
@@ -312,7 +310,7 @@ pub fn add_comment(
     msg!("Created Comment Account");
 
     let mut comment_data =
-        try_from_slice_unchecked::<MovieComment>(&pda_comment.data.borrow()).unwrap();
+        MovieComment::try_from_slice(&pda_comment.data.borrow())?;
 
     msg!("checking if comment account is already initialized");
     if comment_data.is_initialized() {

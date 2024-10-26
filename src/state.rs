@@ -14,28 +14,11 @@ pub struct MovieAccountState {
     pub description: String,
 }
 
-impl MovieAccountState {
-    pub const DISCRIMINATOR: &'static str = "review";
-
-    pub fn get_account_size(title: String, description: String) -> usize {
-        return (4 + MovieAccountState::DISCRIMINATOR.len())
-            + 1
-            + 1
-            + (4 + title.len())
-            + (4 + description.len());
-    }
-}
-
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct MovieCommentCounter {
     pub discriminator: String,
     pub is_initialized: bool,
     pub counter: u64,
-}
-
-impl MovieCommentCounter {
-    pub const DISCRIMINATOR: &'static str = "counter";
-    pub const SIZE: usize = (4 + MovieCommentCounter::DISCRIMINATOR.len()) + 1 + 8;
 }
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -48,11 +31,34 @@ pub struct MovieComment {
     pub count: u64,
 }
 
+impl MovieAccountState {
+    pub const DISCRIMINATOR: &'static str = "review";
+
+    pub fn get_account_size(title: &str, description: &str) -> usize {
+        (4 + Self::DISCRIMINATOR.len())
+            + 1
+            + 32  // Pubkey size
+            + 1   // rating
+            + (4 + title.len())
+            + (4 + description.len())
+    }
+}
+
+impl MovieCommentCounter {
+    pub const DISCRIMINATOR: &'static str = "counter";
+    pub const SIZE: usize = (4 + MovieCommentCounter::DISCRIMINATOR.len()) + 1 + 8;
+}
+
 impl MovieComment {
     pub const DISCRIMINATOR: &'static str = "comment";
 
-    pub fn get_account_size(comment: String) -> usize {
-        return (4 + MovieComment::DISCRIMINATOR.len()) + 1 + 32 + 32 + (4 + comment.len()) + 8;
+    pub fn get_account_size(comment: &str) -> usize {
+        (4 + Self::DISCRIMINATOR.len()) 
+            + 1   // is_initialized
+            + 32  // review
+            + 32  // commenter
+            + (4 + comment.len())
+            + 8   // count
     }
 }
 
